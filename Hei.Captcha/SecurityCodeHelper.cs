@@ -1,5 +1,6 @@
 ﻿using SixLabors.Fonts;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -119,35 +120,31 @@ namespace Hei.Captcha
         /// <returns>验证码图片字节数组</returns>
         public byte[] GetBubbleCodeByte(string text)
         {
-            using (Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight))
+            using Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight);
+            Font textFont = _fontArr.FirstOrDefault(c => "STCAIYUN".Equals(c.Name, StringComparison.CurrentCultureIgnoreCase));
+            if (textFont == null)
             {
-                Font textFont = _fontArr.FirstOrDefault(c => "STCAIYUN".Equals(c.Name, StringComparison.CurrentCultureIgnoreCase));
-                if (textFont == null)
-                {
-                    textFont = _fontArr[_random.Next(0, _fontArr.Length)];
-                }
-
-                var colorCircleHex = _colorHexArr[_random.Next(0, _colorHexArr.Length)];
-                var colorTextHex = colorCircleHex;
-
-                if (_random.Next(0, 6) == 3)
-                {
-                    colorCircleHex = "#FFFFFF";//白色
-                    _circleCount = (int)(_circleCount * 2.65);
-                }
-
-                img.Mutate(ctx => ctx
-                               .Fill(Rgba32.White)
-                               .DrawingCnText(_imageWidth, _imageHeight, text, Rgba32.FromHex(colorTextHex), textFont)
-                               .DrawingCircles(_imageWidth, _imageHeight, _circleCount, _miniCircleR, _maxCircleR, Rgba32.FromHex(colorCircleHex))
-                           );
-
-                using (var ms = new MemoryStream())
-                {
-                    img.Save(ms, PngFormat.Instance);
-                    return ms.ToArray();
-                }
+                textFont = _fontArr[_random.Next(0, _fontArr.Length)];
             }
+
+            var colorCircleHex = _colorHexArr[_random.Next(0, _colorHexArr.Length)];
+            var colorTextHex = colorCircleHex;
+
+            if (_random.Next(0, 6) == 3)
+            {
+                colorCircleHex = "#FFFFFF";//白色
+                _circleCount = (int)(_circleCount * 2.65);
+            }
+
+            img.Mutate(ctx => ctx
+                           .Fill(Color.White)
+                           .DrawingCnText(_imageWidth, _imageHeight, text, Color.ParseHex(colorTextHex), textFont)
+                           .DrawingCircles(_imageWidth, _imageHeight, _circleCount, _miniCircleR, _maxCircleR, Color.ParseHex(colorCircleHex))
+                       );
+
+            using var ms = new MemoryStream();
+            img.Save(ms, PngFormat.Instance);
+            return ms.ToArray();
         }
 
         /// <summary>
@@ -158,7 +155,7 @@ namespace Hei.Captcha
         public byte[] GetGifBubbleCodeByte(string text)
         {
             var gifCicleCount = (int)(_circleCount * 1.5);
-            var color = Rgba32.FromHex(_colorHexArr[_random.Next(0, _colorHexArr.Length)]);
+            var color = Color.ParseHex(_colorHexArr[_random.Next(0, _colorHexArr.Length)]);
             //优先使用STCAIYUN 这个字体
             Font textFont = _fontArr.FirstOrDefault(c => "STCAIYUN".Equals(c.Name, StringComparison.CurrentCultureIgnoreCase));
             if (textFont == null)
@@ -169,7 +166,7 @@ namespace Hei.Captcha
             Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight);
             {
                 img.Mutate(ctx => ctx
-                              .Fill(Rgba32.White)
+                              .Fill(Color.White)
                               .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color)
                            );
 
@@ -177,15 +174,15 @@ namespace Hei.Captcha
                 {
                     using (var tempImg = new Image<Rgba32>(_imageWidth, _imageHeight))
                     {
-                        tempImg.Frames[0].MetaData.GetFormatMetaData(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
+                        tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
                         tempImg.Mutate(ctx => ctx
-                                          .Fill(Rgba32.White)
+                                          .Fill(Color.White)
                                           .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color)
                                        );
                         img.Frames.AddFrame(tempImg.Frames[0]);
                     }
                 }
-                img.Frames[0].MetaData.GetFormatMetaData(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
+                img.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
                 img.Mutate(ctx => ctx
                         .DrawingCnText(_imageWidth, _imageHeight, text, color, textFont)
                      );
@@ -219,11 +216,11 @@ namespace Hei.Captcha
                 {
                     using (Image<Rgba32> tempImg = getEnDigitalCodeImage(text))
                     {
-                        tempImg.Frames[0].MetaData.GetFormatMetaData(GifFormat.Instance).FrameDelay = _random.Next(80, 150);
+                        tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(80, 150);
                         img.Frames.AddFrame(tempImg.Frames[0]);
                     }
                 }
-                img.Frames[0].MetaData.GetFormatMetaData(GifFormat.Instance).FrameDelay = _random.Next(200, 400);
+                img.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(200, 400);
                 return img.ToGifArray();
             }
         }
@@ -240,12 +237,12 @@ namespace Hei.Captcha
             var lignthColorHex = _lightColorHexArr[_random.Next(0, _lightColorHexArr.Length)];
 
             img.Mutate(ctx => ctx
-                        .Fill(Rgba32.FromHex(_lightColorHexArr[_random.Next(0, _lightColorHexArr.Length)]))
-                        .Glow(Rgba32.FromHex(lignthColorHex))
-                        .DrawingGrid(_imageWidth, _imageHeight, Rgba32.FromHex(lignthColorHex), 8, 1)
+                        .Fill(Color.ParseHex(_lightColorHexArr[_random.Next(0, _lightColorHexArr.Length)]))
+                        .Glow(Color.ParseHex(lignthColorHex))
+                        .DrawingGrid(_imageWidth, _imageHeight, Color.ParseHex(lignthColorHex), 8, 1)
                         .DrawingEnText(_imageWidth, _imageHeight, text, _colorHexArr, _fontArr)
                         .GaussianBlur(0.4f)
-                        .DrawingCircles(_imageWidth, _imageHeight, 15, _miniCircleR, _maxCircleR, Rgba32.White)
+                        .DrawingCircles(_imageWidth, _imageHeight, 15, _miniCircleR, _maxCircleR, Color.White)
                     );
             return img;
         }
@@ -268,7 +265,7 @@ namespace Hei.Captcha
 
                     foreach (var name in names)
                     {
-                        fontList.Add(new Font(fontCollection.Install(assembly.GetManifestResourceStream(name)), fontSize));
+                        fontList.Add(new Font(fontCollection.Add(assembly.GetManifestResourceStream(name)), fontSize));
                     }
 
                     _fontArr = fontList.ToArray();

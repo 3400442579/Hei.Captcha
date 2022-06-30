@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Hei.Captcha
 {
@@ -18,7 +16,6 @@ namespace Hei.Captcha
             {
                 throw new ArgumentNullException(nameof(services));
             }
-
             services.AddScoped<SecurityCodeHelper>();
             return services;
         }
