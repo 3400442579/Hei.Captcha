@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Hei.Captcha
 {
@@ -63,7 +64,7 @@ namespace Hei.Captcha
 
         public SecurityCodeHelper()
         {
-            initFonts(_imageHeight);
+            InitFonts(_imageHeight);
         }
 
         /// <summary>
@@ -74,13 +75,9 @@ namespace Hei.Captcha
         public string GetRandomCnText(int length)
         {
             StringBuilder sb = new StringBuilder();
-            if (length > 0)
+            for (int i = 0; i < length; i++)
             {
-                do
-                {
-                    sb.Append(_cnTextArr[_random.Next(0, _cnTextArr.Length)]);
-                }
-                while (--length > 0);
+                sb.Append(_cnTextArr[_random.Next(0, _cnTextArr.Length)]);
             }
             return sb.ToString();
         }
@@ -93,20 +90,16 @@ namespace Hei.Captcha
         public string GetRandomEnDigitalText(int length)
         {
             StringBuilder sb = new StringBuilder();
-            if (length > 0)
+            for (int i = 0; i < length; i++)
             {
-                do
+                if (_random.Next(0, 2) > 0)
                 {
-                    if (_random.Next(0, 2) > 0)
-                    {
-                        sb.Append(_random.Next(2, 10));
-                    }
-                    else
-                    {
-                        sb.Append(_enTextArr[_random.Next(0, _enTextArr.Length)]);
-                    }
+                    sb.Append(_random.Next(2, 10));
                 }
-                while (--length > 0);
+                else
+                {
+                    sb.Append(_enTextArr[_random.Next(0, _enTextArr.Length)]);
+                }
             }
             return sb.ToString();
         }
@@ -118,7 +111,7 @@ namespace Hei.Captcha
         /// <param name="width">验证码宽度，默认宽度100px，可根据传入</param>
         /// <param name="format"></param>
         /// <returns>验证码图片字节数组</returns>
-        public byte[] GetBubbleCodeByte(string text)
+        public async Task<byte[]> GetBubbleCodeByteAsync(string text)
         {
             using Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight);
             Font textFont = _fontArr.FirstOrDefault(c => "STCAIYUN".Equals(c.Name, StringComparison.CurrentCultureIgnoreCase));
@@ -136,14 +129,12 @@ namespace Hei.Captcha
                 _circleCount = (int)(_circleCount * 2.65);
             }
 
-            img.Mutate(ctx => ctx
-                           .Fill(Color.White)
+            img.Mutate(ctx => ctx.Fill(Color.White)
                            .DrawingCnText(_imageWidth, _imageHeight, text, Color.ParseHex(colorTextHex), textFont)
-                           .DrawingCircles(_imageWidth, _imageHeight, _circleCount, _miniCircleR, _maxCircleR, Color.ParseHex(colorCircleHex))
-                       );
+                           .DrawingCircles(_imageWidth, _imageHeight, _circleCount, _miniCircleR, _maxCircleR, Color.ParseHex(colorCircleHex)));
 
             using var ms = new MemoryStream();
-            img.Save(ms, PngFormat.Instance);
+            await img.SaveAsPngAsync(ms);
             return ms.ToArray();
         }
 
@@ -152,7 +143,7 @@ namespace Hei.Captcha
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public byte[] GetGifBubbleCodeByte(string text)
+        public async Task<byte[]> GetGifBubbleCodeByteAsync(string text)
         {
             var gifCicleCount = (int)(_circleCount * 1.5);
             var color = Color.ParseHex(_colorHexArr[_random.Next(0, _colorHexArr.Length)]);
@@ -165,28 +156,26 @@ namespace Hei.Captcha
 
             Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight);
             {
-                img.Mutate(ctx => ctx
-                              .Fill(Color.White)
-                              .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color)
-                           );
+                img.Mutate(ctx => ctx.Fill(Color.White)
+                              .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color));
 
                 for (int i = 0; i < 5; i++)
                 {
-                    using (var tempImg = new Image<Rgba32>(_imageWidth, _imageHeight))
-                    {
-                        tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
-                        tempImg.Mutate(ctx => ctx
-                                          .Fill(Color.White)
-                                          .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color)
-                                       );
-                        img.Frames.AddFrame(tempImg.Frames[0]);
-                    }
+                    using var tempImg = new Image<Rgba32>(_imageWidth, _imageHeight);
+                    tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
+                    tempImg.Mutate(ctx => ctx
+                                      .Fill(Color.White)
+                                      .DrawingCircles(_imageWidth, _imageHeight, gifCicleCount, _miniCircleR, _maxCircleR, color)
+                                   );
+                    img.Frames.AddFrame(tempImg.Frames[0]);
                 }
                 img.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(20, 50);
-                img.Mutate(ctx => ctx
-                        .DrawingCnText(_imageWidth, _imageHeight, text, color, textFont)
-                     );
-                return img.ToGifArray();
+                img.Mutate(ctx => ctx.DrawingCnText(_imageWidth, _imageHeight, text, color, textFont));
+
+
+                using var ms = new MemoryStream();
+                await img.SaveAsGifAsync(ms);
+                return ms.ToArray();
             }
         }
 
@@ -195,12 +184,12 @@ namespace Hei.Captcha
         /// </summary>
         /// <param name="text"></param>
         /// <returns>验证码图片字节数组</returns>
-        public byte[] GetEnDigitalCodeByte(string text)
+        public async Task<byte[]> GetEnDigitalCodeByteAsync(string text)
         {
-            using (Image<Rgba32> img = getEnDigitalCodeImage(text))
-            {
-                return img.ToGifArray();
-            }
+            using Image<Rgba32> img = GetEnDigitalCodeImage(text);
+            using var ms = new MemoryStream();
+            await img.SaveAsGifAsync(ms);
+            return ms.ToArray();
         }
 
         /// <summary>
@@ -208,21 +197,19 @@ namespace Hei.Captcha
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public byte[] GetGifEnDigitalCodeByte(string text)
+        public async Task<byte[]> GetGifEnDigitalCodeByteAsync(string text)
         {
-            using (Image<Rgba32> img = getEnDigitalCodeImage(text))
+            using Image<Rgba32> img = GetEnDigitalCodeImage(text);
+            for (int i = 0; i < 5; i++)
             {
-                for (int i = 0; i < 5; i++)
-                {
-                    using (Image<Rgba32> tempImg = getEnDigitalCodeImage(text))
-                    {
-                        tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(80, 150);
-                        img.Frames.AddFrame(tempImg.Frames[0]);
-                    }
-                }
-                img.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(200, 400);
-                return img.ToGifArray();
+                using Image<Rgba32> tempImg = GetEnDigitalCodeImage(text);
+                tempImg.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(80, 150);
+                img.Frames.AddFrame(tempImg.Frames[0]);
             }
+            img.Frames[0].Metadata.GetFormatMetadata(GifFormat.Instance).FrameDelay = _random.Next(200, 400);
+            using var ms = new MemoryStream();
+            await img.SaveAsGifAsync(ms);
+            return ms.ToArray();
         }
 
         /// <summary>
@@ -230,7 +217,7 @@ namespace Hei.Captcha
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        private Image<Rgba32> getEnDigitalCodeImage(string text)
+        private Image<Rgba32> GetEnDigitalCodeImage(string text)
         {
             Image<Rgba32> img = new Image<Rgba32>(_imageWidth, _imageHeight);
             var colorTextHex = _colorHexArr[_random.Next(0, _colorHexArr.Length)];
@@ -251,29 +238,22 @@ namespace Hei.Captcha
         /// 初始化字体池
         /// </summary>
         /// <param name="fontSize">一个初始大小</param>
-        private void initFonts(int fontSize)
+        private void InitFonts(int fontSize)
         {
             if (_fontArr == null)
             {
                 var assembly = Assembly.GetExecutingAssembly();
                 var names = assembly.GetManifestResourceNames();
 
-                if (names?.Length > 0 == true)
-                {
-                    var fontList = new List<Font>();
-                    var fontCollection = new FontCollection();
+                var fontList = new List<Font>();
+                var fontCollection = new FontCollection();
 
-                    foreach (var name in names)
-                    {
-                        fontList.Add(new Font(fontCollection.Add(assembly.GetManifestResourceStream(name)), fontSize));
-                    }
-
-                    _fontArr = fontList.ToArray();
-                }
-                else
+                foreach (var name in names)
                 {
-                    throw new Exception($"绘制验证码字体文件加载失败");
+                    fontList.Add(new Font(fontCollection.Add(assembly.GetManifestResourceStream(name)), fontSize));
                 }
+
+                _fontArr = fontList.ToArray();
             }
         }
     }

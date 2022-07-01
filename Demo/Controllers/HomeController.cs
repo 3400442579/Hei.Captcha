@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Hei.Captcha;
+using System.Threading.Tasks;
 
 namespace Demo.Controllers
 {
@@ -21,10 +22,10 @@ namespace Demo.Controllers
         /// 泡泡中文验证码 
         /// </summary>
         /// <returns></returns>
-        public IActionResult BubbleCode()
+        public async Task<IActionResult> BubbleCode()
         {
             var code = _securityCode.GetRandomCnText(2);
-            var imgbyte = _securityCode.GetBubbleCodeByte(code);
+            var imgbyte = await _securityCode.GetBubbleCodeByteAsync(code);
 
             return File(imgbyte, "image/png");
         }
@@ -33,10 +34,10 @@ namespace Demo.Controllers
         /// 数字字母组合验证码
         /// </summary>
         /// <returns></returns>
-        public IActionResult HybridCode()
+        public async Task<IActionResult> HybridCodeAsync()
         {
             var code = _securityCode.GetRandomEnDigitalText(4);
-            var imgbyte = _securityCode.GetEnDigitalCodeByte(code);
+            var imgbyte = await _securityCode.GetEnDigitalCodeByteAsync(code);
 
             return File(imgbyte, "image/png");
         }
@@ -45,10 +46,10 @@ namespace Demo.Controllers
         /// gif泡泡中文验证码 
         /// </summary>
         /// <returns></returns>
-        public IActionResult GifBubbleCode()
+        public async Task<IActionResult> GifBubbleCodeAsync()
         {
             var code = _securityCode.GetRandomCnText(2);
-            var imgbyte = _securityCode.GetGifBubbleCodeByte(code);
+            var imgbyte = await _securityCode.GetGifBubbleCodeByteAsync(code);
 
             return File(imgbyte, "image/gif");
         }
@@ -57,10 +58,10 @@ namespace Demo.Controllers
         /// gif数字字母组合验证码
         /// </summary>
         /// <returns></returns>
-        public IActionResult GifHybridCode()
+        public async Task<IActionResult> GifHybridCodeAsync()
         {
             var code = _securityCode.GetRandomEnDigitalText(4);
-            var imgbyte = _securityCode.GetGifEnDigitalCodeByte(code);
+            var imgbyte = await _securityCode.GetGifEnDigitalCodeByteAsync(code);
 
             return File(imgbyte, "image/gif");
         }
